@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DevGovernor Process Snapshot",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "timestamp",
+    "sampling_interval_seconds",
+    "process_count",
+    "processes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO-8601 formatted UTC timestamp"
+    },
+    "sampling_interval_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "process_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "pid",
+          "ppid",
+          "name",
+          "state",
+          "nice_value",
+          "workload_category"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ppid": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 16
+          },
+          "cpu_percent": {
+            "type": ["number", "null"],
+            "minimum": 0.0
+          },
+          "memory_mb": {
+            "type": ["number", "null"],
+            "minimum": 0.0
+          },
+          "nice_value": {
+            "type": "integer",
+            "minimum": -20,
+            "maximum": 19
+          },
+          "workload_category": {
+            "type": "string",
+            "enum": [
+              "development_tool",
+              "development_server",
+              "build_process",
+              "background_process",
+              "system_or_unknown"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

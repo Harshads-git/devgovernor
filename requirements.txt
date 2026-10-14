@@ -1,0 +1,6 @@
+# DevGovernor Dashboard & Tests rely strictly on the Python 3 standard library
+# (sys, os, json, argparse, time, datetime, re, subprocess, unittest).
+# No external pip dependencies are strictly required!
+#
+# Optional enhancements for testing against jsonschema specification:
+# jsonschema>=4.0.0

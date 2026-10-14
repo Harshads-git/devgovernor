@@ -1,0 +1,18 @@
+# Binaries and object files
+*.o
+module1_monitor/monitor
+module2_governor/governor
+
+# Runtime generated data
+data/processes.json
+data/actions.jsonl
+!data/.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
