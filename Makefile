@@ -13,8 +13,8 @@ clean:
 
 test: build
 	python3 tests/test_all.py
-	python3 tests/test_dashboard.py
 	python3 tests/test_governor.py
+	python3 tests/test_dashboard.py
 
 run-monitor: build
 	./module1_monitor/monitor --output data/processes.json --interval 1
