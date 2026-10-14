@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "timestamp": "2026-10-14T16:00:00Z",
+  "sampling_interval_seconds": 1.0,
+  "process_count": 8,
+  "processes": [
+    {
+      "pid": 1042,
+      "ppid": 1000,
+      "name": "code",
+      "state": "S",
+      "cpu_percent": 14.5,
+      "memory_mb": 182.4,
+      "nice_value": 0,
+      "workload_category": "development_tool"
+    },
+    {
+      "pid": 1105,
+      "ppid": 1042,
+      "name": "gcc",
+      "state": "R",
+      "cpu_percent": 88.2,
+      "memory_mb": 94.6,
+      "nice_value": 0,
+      "workload_category": "build_process"
+    },
+    {
+      "pid": 1106,
+      "ppid": 1042,
+      "name": "make",
+      "state": "S",
+      "cpu_percent": 2.1,
+      "memory_mb": 14.2,
+      "nice_value": 0,
+      "workload_category": "build_process"
+    },
+    {
+      "pid": 1250,
+      "ppid": 1000,
+      "name": "python3",
+      "state": "S",
+      "cpu_percent": 24.0,
+      "memory_mb": 120.5,
+      "nice_value": 0,
+      "workload_category": "development_server"
+    },
+    {
+      "pid": 1340,
+      "ppid": 1000,
+      "name": "node",
+      "state": "S",
+      "cpu_percent": 8.5,
+      "memory_mb": 210.0,
+      "nice_value": 0,
+      "workload_category": "development_server"
+    },
+    {
+      "pid": 450,
+      "ppid": 1,
+      "name": "cron",
+      "state": "S",
+      "cpu_percent": 0.0,
+      "memory_mb": 4.1,
+      "nice_value": 0,
+      "workload_category": "background_process"
+    },
+    {
+      "pid": 512,
+      "ppid": 1,
+      "name": "rsyslogd",
+      "state": "S",
+      "cpu_percent": 0.2,
+      "memory_mb": 8.9,
+      "nice_value": 5,
+      "workload_category": "background_process"
+    },
+    {
+      "pid": 1,
+      "ppid": 0,
+      "name": "systemd",
+      "state": "S",
+      "cpu_percent": 0.1,
+      "memory_mb": 12.8,
+      "nice_value": 0,
+      "workload_category": "background_process"
+    }
+  ]
+}
