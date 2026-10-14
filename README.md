@@ -20,9 +20,9 @@
 
 | Role | Teammate | Key Deliverables & Git Boundary |
 | :--- | :--- | :--- |
-| **Student 1** | **Process Monitoring & Workload Intelligence** *(You)* | Reads `/proc/[pid]/status` and `/proc/[pid]/stat`, computes two-point CPU% utilization, measures RSS memory, implements heuristic classification, and produces atomic, validated JSON conforming to `shared/schema.json`. Located in `module1_monitor/`. |
-| **Student 2** | **Resource Management & Priority Governor** | Implements `inspect`, `evaluate` (dry-run recommendation), and `set-nice` using `getpriority()` and `setpriority()`. Enforces safety guards (protects PID 1 and self-PID, bounds-checks `[-20, 19]`), and maintains append-only audit trail in `data/actions.jsonl`. Located in `module2_governor/`. |
-| **Student 3** | **Analytics & Terminal Dashboard** | Implements terminal user interface in Python 3. Renders live process tables, workload category distributions, top resource consumers, governor audit history, and handles missing/empty/corrupted files gracefully. Located in `module3_analytics/`. |
+| **Student 1** | **Harshad S** ([@Harshads-git](https://github.com/Harshads-git))<br>*Process Monitoring & Workload Intelligence* | Reads `/proc/[pid]/status` and `/proc/[pid]/stat`, computes two-point CPU% utilization, measures RSS memory, implements heuristic classification, and produces atomic, validated JSON conforming to `shared/schema.json`. Located in `module1_monitor/`. |
+| **Student 2** | **Mohnish Shanmugam** ([@Mohnish-Shanmugam](https://github.com/Mohnish-Shanmugam))<br>*Resource Management & Priority Governor* | Implements `inspect`, `evaluate` (dry-run recommendation), `set-nice` with `--yes` flag, CFS scheduling weights, workload policy recommendations (`recommend-all`), safety guards, and maintains append-only audit trail in `data/actions.jsonl`. Located in `module2_governor/`. |
+| **Student 3** | **Girithar M** ([@GiritharM2007](https://github.com/GiritharM2007))<br>*Analytics & Terminal Dashboard* | Implements terminal user interface in Python 3. Renders live process tables, visual gauge bars, workload category distributions, top resource consumers, governor audit history, report generator, and handles missing/empty/corrupted files gracefully. Located in `module3_analytics/`. |
 
 ---
 
