@@ -14,15 +14,18 @@ The automated test suite runs using Python's built-in `unittest` framework and v
 # Build the C binaries first
 make
 
-# Run the test suite
+# Run the full integration test suite (requires C binaries)
 make test
 # OR directly:
 python3 tests/test_all.py
+
+# Run Module 3 Dashboard standalone unit test suite (25 tests, pure Python):
+python3 tests/test_dashboard.py
 ```
 
 ### Automated Test Coverage
 
-| Test Case | Module | Description | Expected Outcome |
+| Test Case / Suite | Module | Description | Expected Outcome |
 | :--- | :--- | :--- | :--- |
 | `test_01_monitor_oneshot_json_validity` | Module 1 | Executes monitor with `--oneshot`, parses generated JSON, and validates types, ranges, and schema keys. | Valid JSON returned; fields conform to `shared/schema.json`. |
 | `test_02_governor_safety_guard_pid_1` | Module 2 | Attempts to evaluate and change priority of PID 1 (`init`/`systemd`). | Rejected with non-zero exit code; audit logged with `rejected`. |
@@ -30,6 +33,7 @@ python3 tests/test_all.py
 | `test_04_governor_nonexistent_pid` | Module 2 | Runs inspect/evaluate on a non-existent PID (`999999`). | Handled gracefully with `ESRCH`/`ENOENT` message without crash. |
 | `test_05_governor_dry_run_evaluation` | Module 2 | Runs inspect and evaluate on a spawned test process. | Recommendation logged without modifying live priority. |
 | `test_06_dashboard_error_tolerance` | Module 3 | Feeds dashboard missing files, empty files, and malformed JSON. | Clean human-readable error messages displayed; zero crashes. |
+| `tests/test_dashboard.py` (25 Tests) | Module 3 | Comprehensive suite testing zero-crash file ingestion, micro-retries, aggregation, sorting/filtering, ASCII/Unicode progress bars, governor live sync audit, and report generation. | 25/25 tests pass out-of-the-box with standard library Python. |
 
 ---
 
