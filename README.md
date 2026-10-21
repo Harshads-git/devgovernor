@@ -2,7 +2,8 @@
 
 > **Operating Systems Lab Project (B.Tech Information Technology — 40 Marks)**  
 > **Team of Three Students**  
-> **Target Environment:** Linux / Ubuntu (Native or via Windows 11 WSL2)
+> **Target Environment:** Linux / Ubuntu (Native or via Windows 11 WSL2)  
+> 🌐 **Live Web Dashboard & Simulator:** [https://harshads-git.github.io/devgovernor/](https://harshads-git.github.io/devgovernor/)
 
 ---
 
@@ -83,7 +84,7 @@ Runs comprehensive unit and integration tests verifying JSON compliance, safety 
 ```
 *Note on Nice Range:* Nice values range from `-20` (highest CPU priority) to `19` (lowest priority). Unprivileged users can raise nice values (e.g., 0 to 10) to throttle background tasks. Lowering nice values (e.g., 0 to -5) requires superuser privileges (`sudo`).
 
-### Module 3: Analytics Dashboard (Python 3)
+### Module 3: Terminal Analytics Dashboard (Python 3)
 ```bash
 # Standard single snapshot view
 python3 module3_analytics/dashboard.py --input data/processes.json --history data/actions.jsonl
@@ -93,7 +94,24 @@ python3 module3_analytics/dashboard.py --input data/processes.json --history dat
 
 # Filter by workload category (e.g. show only build tools)
 python3 module3_analytics/dashboard.py --filter build_process --sort memory
+
+# Generate automated Markdown lab report for viva submission
+python3 module3_analytics/dashboard.py --input data/processes.json --export-report docs/lab_viva_report.md
 ```
+
+### Web Dashboard & Interactive Simulator (Browser UI)
+```bash
+# Start the lightweight web dashboard server (built with pure Python standard library)
+make run-web
+# OR directly:
+python3 web/server.py --port 8080
+
+# Then open in any browser:
+# http://localhost:8080/
+```
+*Features:* Live process table with gauge bars, real-time metrics, interactive governor simulator (inspect, evaluate, set-nice), CFS weight delta calculations, and instant OS viva theory guide.
+
+
 
 ---
 

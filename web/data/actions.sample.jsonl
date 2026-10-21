@@ -1,0 +1,3 @@
+{"timestamp": "2026-10-14T15:55:00Z", "pid": 1042, "process_name": "code", "previous_nice": 0, "requested_nice": null, "resulting_nice": 0, "action_type": "inspect", "status": "success", "message": "Inspected process scheduling priority and state"}
+{"timestamp": "2026-10-14T15:56:00Z", "pid": 512, "process_name": "rsyslogd", "previous_nice": 0, "requested_nice": 5, "resulting_nice": 0, "action_type": "evaluate", "status": "recommendation", "message": "Recommend throttle from 0 to 5 (standard user privilege)"}
+{"timestamp": "2026-10-14T15:57:00Z", "pid": 512, "process_name": "rsyslogd", "previous_nice": 0, "requested_nice": 5, "resulting_nice": 5, "action_type": "set_nice", "status": "success", "message": "Successfully changed nice from 0 to 5"}

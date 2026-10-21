@@ -1,0 +1,416 @@
+/**
+ * DevGovernor — Modern Web Analytics & Interactive Scheduling UI
+ * Course: Operating Systems Lab (B.Tech IT)
+ * Works both with live local Python server AND statically on GitHub Pages.
+ */
+
+// Embedded fallback sample dataset ensuring zero broken state on GitHub Pages
+const EMBEDDED_SAMPLE_DATA = {
+  "schema_version": 1,
+  "timestamp": new Date().toISOString(),
+  "sampling_interval_seconds": 1.0,
+  "process_count": 8,
+  "processes": [
+    { "pid": 1105, "ppid": 1042, "name": "gcc", "state": "R", "cpu_percent": 88.2, "memory_mb": 94.6, "nice_value": 0, "workload_category": "build_process" },
+    { "pid": 1250, "ppid": 1000, "name": "python3", "state": "S", "cpu_percent": 24.0, "memory_mb": 120.5, "nice_value": 0, "workload_category": "development_server" },
+    { "pid": 1042, "ppid": 1000, "name": "code", "state": "S", "cpu_percent": 14.5, "memory_mb": 182.4, "nice_value": 0, "workload_category": "development_tool" },
+    { "pid": 1340, "ppid": 1000, "name": "node", "state": "S", "cpu_percent": 8.5, "memory_mb": 210.0, "nice_value": 0, "workload_category": "development_server" },
+    { "pid": 1106, "ppid": 1042, "name": "make", "state": "S", "cpu_percent": 2.1, "memory_mb": 14.2, "nice_value": 0, "workload_category": "build_process" },
+    { "pid": 512,  "ppid": 1,    "name": "rsyslogd", "state": "S", "cpu_percent": 0.2, "memory_mb": 8.9, "nice_value": 5, "workload_category": "background_process" },
+    { "pid": 1,    "ppid": 0,    "name": "systemd", "state": "S", "cpu_percent": 0.1, "memory_mb": 12.8, "nice_value": 0, "workload_category": "background_process" },
+    { "pid": 450,  "ppid": 1,    "name": "cron", "state": "S", "cpu_percent": 0.0, "memory_mb": 4.1, "nice_value": 0, "workload_category": "background_process" }
+  ]
+};
+
+// Linux Kernel CFS Sched Prio to Weight Table (Linux kernel source kernel/sched/core.c)
+const CFS_WEIGHT_TABLE = {
+  "-20": 88761, "-19": 71755, "-18": 56483, "-17": 46273, "-16": 36291,
+  "-15": 29154, "-14": 23254, "-13": 18705, "-12": 14949, "-11": 11916,
+  "-10": 9548,  "-9": 7620,   "-8": 6100,   "-7": 4904,   "-6": 3906,
+  "-5": 3121,   "-4": 2501,   "-3": 1991,   "-2": 1586,   "-1": 1277,
+  "0": 1024,    "1": 820,     "2": 655,     "3": 526,     "4": 423,
+  "5": 335,     "6": 272,     "7": 215,     "8": 172,     "9": 137,
+  "10": 110,    "11": 87,     "12": 70,     "13": 56,     "14": 45,
+  "15": 36,     "16": 29,     "17": 23,     "18": 18,     "19": 15
+};
+
+let currentProcessData = null;
+let currentActionsData = [];
+let sortColumn = "cpu_percent";
+let sortAscending = false;
+let autoRefreshTimer = null;
+let isAutoRefresh = true;
+
+// Tab Switching
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    const target = document.getElementById(btn.dataset.tab);
+    if (target) target.classList.add("active");
+  });
+});
+
+// Auto-Refresh Button Toggle
+const autoRefreshBtn = document.getElementById("toggle-refresh");
+if (autoRefreshBtn) {
+  autoRefreshBtn.addEventListener("click", () => {
+    isAutoRefresh = !isAutoRefresh;
+    autoRefreshBtn.textContent = isAutoRefresh ? "Pause Live Sync" : "Resume Live Sync";
+    autoRefreshBtn.classList.toggle("btn-primary", isAutoRefresh);
+    if (isAutoRefresh) {
+      fetchData();
+      startAutoRefresh();
+    } else {
+      clearInterval(autoRefreshTimer);
+    }
+  });
+}
+
+// Fetch process & action data
+async function fetchData() {
+  try {
+    // 1. Try Live Process API or local file
+    let procRes = null;
+    try {
+      procRes = await fetch("/api/processes");
+    } catch (e) {
+      procRes = await fetch("../data/processes.sample.json");
+    }
+
+    if (procRes && procRes.ok) {
+      currentProcessData = await procRes.json();
+    } else {
+      currentProcessData = EMBEDDED_SAMPLE_DATA;
+    }
+
+    // 2. Try Actions API or local actions
+    try {
+      const actRes = await fetch("/api/actions");
+      if (actRes.ok) {
+        const json = await actRes.json();
+        currentActionsData = json.actions || [];
+      }
+    } catch (e) {
+      // Fallback
+      currentActionsData = [];
+    }
+
+    renderMetrics();
+    renderProcessTable();
+    renderActionHistory();
+    updateStatusBadge();
+  } catch (err) {
+    console.warn("Using embedded fallback dataset:", err);
+    currentProcessData = EMBEDDED_SAMPLE_DATA;
+    renderMetrics();
+    renderProcessTable();
+  }
+}
+
+function updateStatusBadge() {
+  const badge = document.getElementById("status-indicator");
+  if (!badge) return;
+  const isLive = currentProcessData && currentProcessData._source === "live";
+  badge.innerHTML = `
+    <span class="status-dot" style="background-color: ${isLive ? '#10b981' : '#06b6d4'};"></span>
+    <span>${isLive ? 'Live Linux /proc Sync' : 'Simulated Sample Data'}</span>
+  `;
+}
+
+// Render Summary Metrics Cards
+function renderMetrics() {
+  if (!currentProcessData || !currentProcessData.processes) return;
+  const procs = currentProcessData.processes;
+
+  let totalRss = 0;
+  let runningCount = 0;
+  let devWorkloads = 0;
+  let elevatedPriority = 0;
+
+  procs.forEach(p => {
+    if (p.memory_mb) totalRss += p.memory_mb;
+    if (p.state === "R") runningCount++;
+    if (["development_tool", "development_server", "build_process"].includes(p.workload_category)) {
+      devWorkloads++;
+    }
+    if (p.nice_value < 0) elevatedPriority++;
+  });
+
+  const elPids = document.getElementById("metric-pids");
+  const elRss = document.getElementById("metric-rss");
+  const elDev = document.getElementById("metric-dev");
+  const elPrio = document.getElementById("metric-prio");
+
+  if (elPids) elPids.textContent = procs.length;
+  if (elRss) elRss.textContent = `${totalRss.toFixed(1)} MB`;
+  if (elDev) elDev.textContent = `${devWorkloads} / ${procs.length}`;
+  if (elPrio) elPrio.textContent = elevatedPriority;
+}
+
+// Render Active Process Table
+function renderProcessTable() {
+  if (!currentProcessData || !currentProcessData.processes) return;
+  const tbody = document.getElementById("process-table-body");
+  if (!tbody) return;
+
+  const searchTerm = (document.getElementById("search-input")?.value || "").toLowerCase();
+  const filterCat = document.getElementById("filter-category")?.value || "";
+
+  let list = [...currentProcessData.processes];
+
+  // Filtering
+  list = list.filter(p => {
+    const matchSearch = String(p.pid).includes(searchTerm) || p.name.toLowerCase().includes(searchTerm);
+    const matchCat = !filterCat || p.workload_category === filterCat;
+    return matchSearch && matchCat;
+  });
+
+  // Sorting
+  list.sort((a, b) => {
+    let va = a[sortColumn];
+    let vb = b[sortColumn];
+    if (va === null || va === undefined) va = -9999;
+    if (vb === null || vb === undefined) vb = -9999;
+    if (typeof va === "string") return sortAscending ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAscending ? va - vb : vb - va;
+  });
+
+  tbody.innerHTML = list.map(p => {
+    const cpu = p.cpu_percent !== null ? p.cpu_percent : 0;
+    const cpuClamped = Math.min(cpu, 100);
+    const gaugeClass = cpu > 60 ? "gauge-high" : (cpu > 20 ? "gauge-mid" : "gauge-low");
+    const overflow = cpu > 100 ? "+" : "";
+
+    let niceClass = "nice-normal";
+    if (p.nice_value < 0) niceClass = "nice-high";
+    else if (p.nice_value > 0) niceClass = "nice-low";
+
+    const catBadge = getCategoryBadge(p.workload_category);
+
+    return `
+      <tr>
+        <td class="mono"><strong>${p.pid}</strong></td>
+        <td class="mono" style="color: var(--text-dim);">${p.ppid}</td>
+        <td>
+          <span style="font-weight: 600; color: #fff;">${escapeHtml(p.name)}</span>
+        </td>
+        <td>${catBadge}</td>
+        <td>
+          <span class="badge ${p.state === 'R' ? 'badge-dev-srv' : 'badge-bg'}">${p.state === 'R' ? 'Running' : 'Sleep'}</span>
+        </td>
+        <td>
+          <span class="nice-pill ${niceClass}">${p.nice_value}</span>
+        </td>
+        <td>
+          <div class="gauge-container">
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill ${gaugeClass}" style="width: ${cpuClamped}%;"></div>
+            </div>
+            <span class="mono" style="font-weight: 600; font-size: 0.85rem; min-width: 50px;">
+              ${p.cpu_percent !== null ? `${cpu.toFixed(1)}%${overflow}` : 'N/A'}
+            </span>
+          </div>
+        </td>
+        <td class="mono">${p.memory_mb !== null ? `${p.memory_mb.toFixed(1)} MB` : 'N/A'}</td>
+        <td>
+          <button class="btn" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="prefillGovernor(${p.pid}, ${p.nice_value})">Govern</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function getCategoryBadge(cat) {
+  switch (cat) {
+    case "development_tool": return '<span class="badge badge-dev-tool">DEV-TOOL</span>';
+    case "development_server": return '<span class="badge badge-dev-srv">DEV-SERVER</span>';
+    case "build_process": return '<span class="badge badge-build">BUILD</span>';
+    case "background_process": return '<span class="badge badge-bg">BACKGROUND</span>';
+    default: return '<span class="badge badge-sys">SYSTEM/OTHER</span>';
+  }
+}
+
+// Action History Audit
+function renderActionHistory() {
+  const container = document.getElementById("history-feed-container");
+  if (!container) return;
+
+  if (!currentActionsData || currentActionsData.length === 0) {
+    container.innerHTML = `
+      <div class="history-card" style="justify-content: center; color: var(--text-dim);">
+        <span>No governor actions recorded yet. Use the Governor Simulator tab to evaluate or adjust process priorities.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = [...currentActionsData].reverse().slice(0, 15).map(act => {
+    const isSuccess = ["success", "recommendation"].includes(act.status);
+    const statusColor = isSuccess ? "#34d399" : "#f43f5e";
+    const statusBadge = `<span class="badge" style="color: ${statusColor}; border: 1px solid ${statusColor};">${(act.action_type || 'action').toUpperCase()}</span>`;
+
+    return `
+      <div class="history-card">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
+            ${statusBadge}
+            <strong>PID ${act.pid} (${escapeHtml(act.process_name || 'process')})</strong>
+            <span class="mono" style="font-size: 0.8rem; color: var(--text-dim);">${act.timestamp || ''}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(act.message || '')}</div>
+        </div>
+        <div style="text-align: right; min-width: 140px;">
+          <span class="nice-pill nice-normal">Nice: ${act.previous_nice ?? 'N/A'} &rarr; ${act.resulting_nice ?? act.requested_nice ?? 'N/A'}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Prefill Simulator from Table
+window.prefillGovernor = function(pid, currentNice) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  document.querySelector('[data-tab="simulator-tab"]').classList.add("active");
+  document.getElementById("simulator-tab").classList.add("active");
+
+  document.getElementById("sim-pid").value = pid;
+  document.getElementById("sim-target-nice").value = currentNice < 10 ? currentNice + 5 : 0;
+  runSimInspect();
+};
+
+// Interactive Governor Simulator Functions
+window.runSimInspect = function() {
+  const pid = parseInt(document.getElementById("sim-pid").value);
+  const consoleBox = document.getElementById("sim-console");
+  if (!pid) return logToConsole("Error: Please specify a valid PID.");
+
+  const p = currentProcessData?.processes?.find(x => x.pid === pid);
+  const nice = p ? p.nice_value : 0;
+  const weight = CFS_WEIGHT_TABLE[String(nice)] || 1024;
+
+  logToConsole(
+`=== DevGovernor Process Inspection ===
+PID             : ${pid} (${p ? p.name : 'active_task'})
+Resident Memory : ${p ? p.memory_mb : 'N/A'} MB
+Current Nice    : ${nice}
+CFS CPU Weight  : ${weight} (sched_prio_to_weight)
+Scheduling Class: ${nice < 0 ? 'HIGH PRIORITY (Accelerated CFS vruntime)' : (nice === 0 ? 'STANDARD PRIORITY (Default Linux baseline)' : 'LOW / BACKGROUND PRIORITY (Throttled)')}
+Valid Nice Range: [-20 (highest priority) to +19 (lowest priority)]`
+  );
+};
+
+window.runSimEvaluate = function() {
+  const pid = parseInt(document.getElementById("sim-pid").value);
+  const targetNice = parseInt(document.getElementById("sim-target-nice").value);
+
+  if (!pid || isNaN(targetNice)) return logToConsole("Error: Specify valid PID and Target Nice.");
+  if (pid <= 1) return logToConsole("[REJECTED] PID <= 1 is protected (init/systemd).");
+  if (targetNice < -20 || targetNice > 19) return logToConsole("[REJECTED] Nice value must be in range [-20, 19].");
+
+  const p = currentProcessData?.processes?.find(x => x.pid === pid);
+  const currentNice = p ? p.nice_value : 0;
+  const oldWeight = CFS_WEIGHT_TABLE[String(currentNice)] || 1024;
+  const newWeight = CFS_WEIGHT_TABLE[String(targetNice)] || 1024;
+  const pctChange = ((newWeight - oldWeight) / oldWeight * 100).toFixed(1);
+
+  const privilege = targetNice < currentNice
+    ? "SUPERUSER REQUIRED: Lowering nice below current priority requires CAP_SYS_NICE or sudo."
+    : "STANDARD PRIVILEGE: Raising nice (deprioritizing) is permitted for unprivileged users on own tasks.";
+
+  logToConsole(
+`=== DevGovernor Priority Evaluation (Dry-Run) ===
+PID              : ${pid} (${p ? p.name : 'task'})
+Current Nice     : ${currentNice} (Weight: ${oldWeight})
+Proposed Nice    : ${targetNice} (Weight: ${newWeight})
+CFS Weight Delta : ${pctChange >= 0 ? '+' : ''}${pctChange}% CPU timeslice allocation
+Privilege Check  : ${privilege}
+Recommendation   : ${targetNice < currentNice ? 'BOOST PRIORITY' : (targetNice > currentNice ? 'THROTTLE / BACKGROUND' : 'NO CHANGE')}
+DRY-RUN RESULT   : No modifications were applied to live operating system.`
+  );
+};
+
+window.runSimSetNice = async function() {
+  const pid = parseInt(document.getElementById("sim-pid").value);
+  const targetNice = parseInt(document.getElementById("sim-target-nice").value);
+
+  if (!pid || isNaN(targetNice)) return logToConsole("Error: Specify valid PID and Target Nice.");
+  if (pid <= 1) return logToConsole("[BLOCKED] Modification of PID <= 1 is permanently blocked.");
+  if (targetNice < -20 || targetNice > 19) return logToConsole("[BLOCKED] Nice value out of range [-20, 19].");
+
+  logToConsole(`[DevGovernor] Applying setpriority(PRIO_PROCESS, ${pid}, ${targetNice})...`);
+
+  try {
+    const res = await fetch("/api/set-nice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pid, nice: targetNice })
+    });
+
+    const json = await res.json();
+    if (res.ok && json.success) {
+      logToConsole(`SUCCESS: Process priority updated!
+Result: Nice value set to ${targetNice}.
+Message: ${json.message}`);
+      // Record action locally
+      currentActionsData.push({
+        timestamp: new Date().toISOString(),
+        pid: pid,
+        process_name: "target_process",
+        action_type: "set_nice",
+        status: "success",
+        previous_nice: 0,
+        resulting_nice: targetNice,
+        message: json.message
+      });
+      renderActionHistory();
+      fetchData();
+    } else {
+      logToConsole(`FAILED: ${json.error || json.message}`);
+    }
+  } catch (err) {
+    // Client-side simulation fallback
+    logToConsole(`[Simulated Success] Priority change simulated on client: PID ${pid} set to nice ${targetNice}.`);
+  }
+};
+
+function logToConsole(text) {
+  const box = document.getElementById("sim-console");
+  if (box) {
+    box.textContent = text;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Table Sorting Event Handlers
+document.querySelectorAll("thead th[data-sort]").forEach(th => {
+  th.addEventListener("click", () => {
+    const col = th.dataset.sort;
+    if (sortColumn === col) {
+      sortAscending = !sortAscending;
+    } else {
+      sortColumn = col;
+      sortAscending = false;
+    }
+    renderProcessTable();
+  });
+});
+
+// Search & Filter Listeners
+document.getElementById("search-input")?.addEventListener("input", renderProcessTable);
+document.getElementById("filter-category")?.addEventListener("change", renderProcessTable);
+
+// Start Periodic Auto-Refresh
+function startAutoRefresh() {
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(fetchData, 2000);
+}
+
+// Initialization
+fetchData();
+startAutoRefresh();

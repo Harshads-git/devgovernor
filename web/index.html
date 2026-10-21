@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevGovernor — Linux Developer Productivity & Scheduling Priority Governor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">DG</div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="brand-title">DevGovernor</span>
+          <span class="brand-tag">v1.0.0</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim);">Kernel-Level Developer Productivity Governor & Resource Manager</div>
+      </div>
+    </div>
+
+    <div class="nav-controls">
+      <div class="status-indicator" id="status-indicator">
+        <span class="status-dot"></span>
+        <span>Initializing...</span>
+      </div>
+      <button class="btn btn-primary" id="toggle-refresh">Pause Live Sync</button>
+      <a href="https://github.com/Harshads-git/devgovernor" target="_blank" class="btn" style="text-decoration: none;">GitHub Repo</a>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="tabs-nav">
+    <button class="tab-btn active" data-tab="monitor-tab">📊 Live Process Monitor</button>
+    <button class="tab-btn" data-tab="history-tab">⚡ Governor Action History</button>
+    <button class="tab-btn" data-tab="simulator-tab">🎮 Governor Simulator</button>
+    <button class="tab-btn" data-tab="architecture-tab">📖 OS Architecture & Viva Guide</button>
+    <button class="tab-btn" data-tab="team-tab">👥 Team & Credits</button>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- TAB 1: Live Process Monitor -->
+    <section id="monitor-tab" class="tab-content active">
+      <!-- Summary Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="card">
+          <div class="card-title">Total Monitored PIDs</div>
+          <div class="card-value" id="metric-pids">--</div>
+          <div class="card-subtext">Active Process Control Blocks in /proc</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Committed Physical RAM (RSS)</div>
+          <div class="card-value" id="metric-rss" style="color: var(--accent-cyan);">--</div>
+          <div class="card-subtext">Aggregate Resident Set Size in memory</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Active Development Tasks</div>
+          <div class="card-value" id="metric-dev" style="color: var(--accent-emerald);">--</div>
+          <div class="card-subtext">Build tools, editors & dev servers</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Elevated Priority Tasks</div>
+          <div class="card-value" id="metric-prio" style="color: var(--accent-amber);">--</div>
+          <div class="card-subtext">Processes with Nice &lt; 0 (High CPU share)</div>
+        </div>
+      </div>
+
+      <!-- Toolbar / Filters -->
+      <div class="toolbar">
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <input type="text" id="search-input" class="search-input" placeholder="Search PID or process name...">
+          <select id="filter-category" class="select-filter">
+            <option value="">All Workload Categories</option>
+            <option value="development_tool">Development Tools (Editors, Shells)</option>
+            <option value="development_server">Development Servers (Python, Node)</option>
+            <option value="build_process">Build Processes (Make, GCC, Clang)</option>
+            <option value="background_process">Background Daemons (Systemd, Cron)</option>
+            <option value="system_or_unknown">System / Other</option>
+          </select>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-dim); font-family: var(--font-mono);">
+          Click table headers to sort &bull; Sampling interval: 1.0s
+        </div>
+      </div>
+
+      <!-- Process Table -->
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="pid">PID</th>
+              <th data-sort="ppid">PPID</th>
+              <th data-sort="name">Process Name</th>
+              <th data-sort="workload_category">Category</th>
+              <th data-sort="state">State</th>
+              <th data-sort="nice_value">Nice</th>
+              <th data-sort="cpu_percent">CPU % Utilization</th>
+              <th data-sort="memory_mb">Physical RAM (RSS)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="process-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-dim);">Loading live process metrics...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 2: Governor Action History -->
+    <section id="history-tab" class="tab-content">
+      <div class="doc-section" style="margin-bottom: 1.5rem;">
+        <h2>Governor Action Audit Log (data/actions.jsonl)</h2>
+        <p>Every scheduling priority change, dry-run evaluation, and inspection executed by <strong>Module 2 (Governor)</strong> is appended to an immutable JSON-Lines audit log. This provides a transparent before-and-after audit trail for grading and runtime analysis.</p>
+      </div>
+
+      <div class="history-feed" id="history-feed-container">
+        <!-- Feed populated via JavaScript -->
+      </div>
+    </section>
+
+    <!-- TAB 3: Interactive Governor Simulator -->
+    <section id="simulator-tab" class="tab-content">
+      <div class="doc-section" style="margin-bottom: 1.5rem;">
+        <h2>Interactive Process Priority Governor</h2>
+        <p>Directly evaluate, inspect, or adjust Linux process scheduling priorities using standard POSIX <code>getpriority()</code> and <code>setpriority()</code> system call semantics.</p>
+      </div>
+
+      <div class="simulator-panel">
+        <!-- Control Panel -->
+        <div class="card">
+          <h3 style="margin-bottom: 1.25rem; font-size: 1.1rem; color: var(--accent-cyan);">Target Process Controls</h3>
+          <div class="control-form">
+            <div class="form-group">
+              <label for="sim-pid">Target Process ID (PID)</label>
+              <input type="number" id="sim-pid" class="form-control" placeholder="e.g. 1105" value="1105">
+            </div>
+
+            <div class="form-group">
+              <label for="sim-target-nice">Target Nice Priority Value (-20 to 19)</label>
+              <input type="number" id="sim-target-nice" class="form-control" min="-20" max="19" value="5">
+              <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.35rem;">
+                -20 = Maximum CPU priority &bull; 0 = Standard baseline &bull; 19 = Maximum background throttling
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.6rem; margin-top: 0.5rem; flex-wrap: wrap;">
+              <button class="btn" onclick="runSimInspect()">🔍 Inspect Priority</button>
+              <button class="btn" onclick="runSimEvaluate()">🧪 Dry-Run Evaluate</button>
+              <button class="btn btn-primary" onclick="runSimSetNice()">⚡ Apply Nice Adjustment</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Console Output -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 1.1rem; color: #38bdf8;">Governor Console & CFS Weight Calculation</h3>
+            <span class="brand-tag">Terminal Output</span>
+          </div>
+          <div class="console-box" id="sim-console">Select a process from the table or enter a PID and click "Inspect Priority" or "Dry-Run Evaluate" to observe CFS weight transitions.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: OS Architecture & Viva Guide -->
+    <section id="architecture-tab" class="tab-content">
+      <div class="doc-section">
+        <h2>Operating Systems Laboratory Project Specification</h2>
+        <p><strong>DevGovernor</strong> is a lightweight, user-space developer productivity and scheduling-priority management prototype built for Linux operating systems.</p>
+
+        <h3>1. The Linux /proc Virtual Filesystem</h3>
+        <p>In Linux, <code>/proc</code> does not reside on any physical disk; it is an in-memory virtual filesystem generated on the fly by the Linux kernel. DevGovernor opens <code>/proc/[pid]/status</code> for process metadata (Name, State, PPID, VmRSS) and <code>/proc/[pid]/stat</code> for cumulative CPU clock ticks.</p>
+
+        <h3>2. Two-Point CPU Utilization Sampling</h3>
+        <p>Because the Linux kernel does not provide an instantaneous CPU percentage, DevGovernor performs two-point delta sampling across wall-clock time &Delta;t:</p>
+        <p><code>CPU % = [(&Delta;utime + &Delta;stime) / CLK_TCK] / &Delta;t * 100.0</code></p>
+
+        <h3>3. Completely Fair Scheduler (CFS) & Nice Values</h3>
+        <p>The Linux Completely Fair Scheduler uses nice values (-20 to 19) to scale each process's virtual runtime (<code>vruntime</code>) accumulation. Higher priority tasks (lower nice values) have higher weights in the kernel's <code>sched_prio_to_weight</code> array, allowing them to receive more CPU timeslices without starvation.</p>
+
+        <h3>4. Physical RAM (VmRSS) vs. Virtual Memory (VmSize)</h3>
+        <p><strong>VmRSS (Resident Set Size):</strong> The actual physical frames in RAM currently held by the process. DevGovernor reports this value because it reflects true memory pressure.<br>
+        <strong>VmSize (Virtual Size):</strong> The total virtual address space mapped (including uncommitted memory and shared libraries).</p>
+
+        <h3>5. Atomic Inter-Process Communication (IPC)</h3>
+        <p>Module 1 (C Monitor) writes its snapshot to <code>data/processes.json.tmp</code> and uses the POSIX <code>rename()</code> system call to atomically replace <code>data/processes.json</code>. This guarantees zero-race condition reads for the Python dashboard and Web UI.</p>
+      </div>
+    </section>
+
+    <!-- TAB 5: Team & Credits -->
+    <section id="team-tab" class="tab-content">
+      <div class="doc-section">
+        <h2>Team Members & Division of Responsibilities</h2>
+        <p>DevGovernor was built by a team of three B.Tech Information Technology students for the 40-Mark Operating Systems Lab.</p>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="card">
+          <div class="card-title">Student 1 (Process Monitoring)</div>
+          <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin: 0.3rem 0;">Harshad S</div>
+          <div style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono); margin-bottom: 0.75rem;">
+            <a href="https://github.com/Harshads-git" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">@Harshads-git</a>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Engineered <strong>Module 1 (C Process Monitor)</strong>: /proc filesystem traversal, two-point CPU tick delta sampling, VmRSS physical RAM parsing, and atomic JSON snapshot generation.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Student 2 (Resource Governor)</div>
+          <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin: 0.3rem 0;">Mohnish Shanmugam</div>
+          <div style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono); margin-bottom: 0.75rem;">
+            <a href="https://github.com/Mohnish-Shanmugam" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">@Mohnish-Shanmugam</a>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Engineered <strong>Module 2 (C Priority Governor)</strong>: Scheduling priority inspection, CFS weight calculation, dry-run evaluations, <code>setpriority()</code> adjustments, and audit trail logging.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Student 3 (Analytics Dashboard)</div>
+          <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin: 0.3rem 0;">Girithar M</div>
+          <div style="font-size: 0.85rem; color: var(--accent-cyan); font-family: var(--font-mono); margin-bottom: 0.75rem;">
+            <a href="https://github.com/GiritharM2007" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">@GiritharM2007</a>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Engineered <strong>Module 3 (Terminal Dashboard & Reporting)</strong>: Fault-tolerant JSON ingestion, visual resource gauge bars, live action cross-referencing, and automated markdown lab report generation.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    DevGovernor &bull; Operating Systems Lab Project (B.Tech IT) &bull; Built with C99, Python 3, & Modern Web Technologies &bull; Fully Open Source
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

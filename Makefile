@@ -1,4 +1,4 @@
-.PHONY: all build clean test demo run-monitor run-dashboard
+.PHONY: all build clean test demo run-monitor run-dashboard run-web
 
 all: build
 
@@ -24,3 +24,6 @@ run-monitor: build
 
 run-dashboard:
 	python3 module3_analytics/dashboard.py --input data/processes.json --history data/actions.jsonl
+
+run-web:
+	python3 web/server.py --port 8080
