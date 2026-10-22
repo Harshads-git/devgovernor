@@ -112,6 +112,7 @@ static void classify_workload(const char *name, char *category_out, size_t out_l
 
     /* 3. Development Tools and Interactive Editors/Shells */
     if (strstr(lower, "code") || strstr(lower, "cursor") ||
+        strstr(lower, "copilot") ||
         strstr(lower, "nvim") || strstr(lower, "vim") ||
         strstr(lower, "emacs") || strstr(lower, "git") ||
         strstr(lower, "gdb") || strstr(lower, "lldb") ||
@@ -144,6 +145,56 @@ static int is_pid_dir(const char *name) {
         if (!isdigit((unsigned char)*p)) return 0;
     }
     return 1;
+}
+
+/* Inspect /proc/[pid]/cmdline to disambiguate generic runtime/thread names (like Node.js MainThread for VS Code) */
+static void refine_process_name(int pid, char *name_out, size_t name_len) {
+    char path[MAX_PATH_LEN];
+    snprintf(path, sizeof(path), "/proc/%d/cmdline", pid);
+
+    FILE *f = fopen(path, "r");
+    if (!f) return;
+
+    char cmdline[1024];
+    size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, f);
+    fclose(f);
+
+    if (n == 0) return;
+    cmdline[n] = '\0';
+
+    /* Convert null delimiters to spaces */
+    for (size_t i = 0; i < n; i++) {
+        if (cmdline[i] == '\0') cmdline[i] = ' ';
+    }
+
+    char lower[1024];
+    size_t i = 0;
+    for (; cmdline[i] && i < sizeof(lower) - 1; i++) {
+        lower[i] = (char)tolower((unsigned char)cmdline[i]);
+    }
+    lower[i] = '\0';
+
+    /* Detect VS Code Remote Server / extensions in WSL */
+    if (strstr(lower, ".vscode-server") || strstr(lower, "code-server") || strstr(lower, "ms-vscode") || strstr(lower, "vscode")) {
+        if (strstr(lower, "extensionhost")) {
+            snprintf(name_out, name_len, "code-ext-host");
+        } else if (strstr(lower, "filewatcher")) {
+            snprintf(name_out, name_len, "code-filewatch");
+        } else if (strstr(lower, "agenthost")) {
+            snprintf(name_out, name_len, "code-agent");
+        } else if (strstr(lower, "copilot")) {
+            snprintf(name_out, name_len, "copilot-agent");
+        } else {
+            snprintf(name_out, name_len, "code-server");
+        }
+        return;
+    }
+
+    /* Detect Cursor AI editor in WSL */
+    if (strstr(lower, ".cursor-server") || strstr(lower, "cursor-server")) {
+        snprintf(name_out, name_len, "cursor-server");
+        return;
+    }
 }
 
 /* Read process status from /proc/[pid]/status
@@ -209,12 +260,20 @@ static int read_proc_status(int pid, char *name_out, size_t name_len,
         }
     }
 
+    /* Disambiguate generic runtime/thread names (like Node.js MainThread for VS Code) */
+    if (strcmp(name_out, "MainThread") == 0 ||
+        strcmp(name_out, "node") == 0 ||
+        strcmp(name_out, "sh") == 0) {
+        refine_process_name(pid, name_out, name_len);
+    }
+
     if (state_out[0] == '\0') {
         snprintf(state_out, state_len, "?");
     }
 
     return 0;
 }
+
 
 /* Read CPU ticks (utime and stime) from /proc/[pid]/stat
  * Format: pid (comm) state ppid ... utime(14) stime(15) ...

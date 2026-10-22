@@ -113,7 +113,19 @@ const APP_NAME_MAP = {
   "openclaw-gatewa": "OpenClaw Gateway Service",
   "wslservice": "Windows Subsystem for Linux (WSL)",
   "agetty": "Linux TTY Terminal Login",
-  "unattended-upgr": "Ubuntu Automatic Security Upgrades"
+  "unattended-upgr": "Ubuntu Automatic Security Upgrades",
+
+  // VS Code in WSL (binaries: code, code-server, vscode-server, MainThread, copilot)
+  "code": "Visual Studio Code",
+  "vscode": "Visual Studio Code",
+  "code-server": "Visual Studio Code (WSL Remote Server)",
+  "vscode-server": "Visual Studio Code (WSL Remote Server)",
+  "code-ext-host": "Visual Studio Code (Extension Host)",
+  "code-filewatch": "Visual Studio Code (File Watcher)",
+  "code-agent": "Visual Studio Code (Agent Host)",
+  "mainthread": "Visual Studio Code (Remote Server)",
+  "copilot-runtime": "GitHub Copilot (AI Runtime)",
+  "copilot-agent": "GitHub Copilot Agent"
 };
 
 function getFriendlyAppName(rawName, category) {
@@ -121,6 +133,26 @@ function getFriendlyAppName(rawName, category) {
   const lower = rawName.toLowerCase().trim();
 
   if (APP_NAME_MAP[lower]) return APP_NAME_MAP[lower];
+
+  // Specific VS Code and AI dev tools pattern matchers
+  if (lower === "code" || lower === "vscode") {
+    return "Visual Studio Code";
+  }
+  if (lower.includes("code-server") || lower.includes("vscode-server") || lower === "mainthread") {
+    return "Visual Studio Code (WSL Remote Server)";
+  }
+  if (lower.includes("code-ext") || lower.includes("extensionhost")) {
+    return "Visual Studio Code (Extension Host)";
+  }
+  if (lower.includes("code-filewatch") || lower.includes("filewatcher")) {
+    return "Visual Studio Code (File Watcher)";
+  }
+  if (lower.includes("code-agent") || lower.includes("agenthost")) {
+    return "Visual Studio Code (Agent Host)";
+  }
+  if (lower.includes("copilot")) {
+    return "GitHub Copilot (AI Runtime)";
+  }
 
   // Heuristic pattern matchers
   if (lower.startsWith("python")) return `Python Application (${rawName})`;
@@ -133,6 +165,7 @@ function getFriendlyAppName(rawName, category) {
   // Capitalize fallback
   return rawName.charAt(0).toUpperCase() + rawName.slice(1) + " Process";
 }
+
 
 let currentProcessData = null;
 let currentActionsData = [];
