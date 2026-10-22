@@ -187,6 +187,20 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
+// Architecture Sub-navigation smooth scroll
+document.querySelectorAll(".arch-nav-pill").forEach(pill => {
+  pill.addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelectorAll(".arch-nav-pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    const targetId = pill.getAttribute("href")?.substring(1);
+    const targetEl = document.getElementById(targetId);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+});
+
 // Auto-Refresh Button Toggle
 const autoRefreshBtn = document.getElementById("toggle-refresh");
 if (autoRefreshBtn) {

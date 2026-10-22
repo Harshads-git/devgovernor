@@ -172,27 +172,447 @@
 
     <!-- TAB 4: OS Architecture -->
     <section id="architecture-tab" class="tab-content">
-      <div class="doc-section">
-        <h2>Operating Systems Laboratory Project Specification</h2>
-        <p><strong>DevGovernor</strong> is a lightweight, user-space developer productivity and scheduling-priority management prototype built for Linux operating systems.</p>
-
-        <h3>1. The Linux /proc Virtual Filesystem</h3>
-        <p>In Linux, <code>/proc</code> does not reside on any physical disk; it is an in-memory virtual filesystem generated on the fly by the Linux kernel. DevGovernor opens <code>/proc/[pid]/status</code> for process metadata (Name, State, PPID, VmRSS) and <code>/proc/[pid]/stat</code> for cumulative CPU clock ticks.</p>
-
-        <h3>2. Two-Point CPU Utilization Sampling</h3>
-        <p>Because the Linux kernel does not provide an instantaneous CPU percentage, DevGovernor performs two-point delta sampling across wall-clock time &Delta;t:</p>
-        <p><code>CPU % = [(&Delta;utime + &Delta;stime) / CLK_TCK] / &Delta;t * 100.0</code></p>
-
-        <h3>3. Completely Fair Scheduler (CFS) & Nice Values</h3>
-        <p>The Linux Completely Fair Scheduler uses nice values (-20 to 19) to scale each process's virtual runtime (<code>vruntime</code>) accumulation. Higher priority tasks (lower nice values) have higher weights in the kernel's <code>sched_prio_to_weight</code> array, allowing them to receive more CPU timeslices without starvation.</p>
-
-        <h3>4. Physical RAM (VmRSS) vs. Virtual Memory (VmSize)</h3>
-        <p><strong>VmRSS (Resident Set Size):</strong> The actual physical frames in RAM currently held by the process. DevGovernor reports this value because it reflects true memory pressure.<br>
-        <strong>VmSize (Virtual Size):</strong> The total virtual address space mapped (including uncommitted memory and shared libraries).</p>
-
-        <h3>5. Atomic Inter-Process Communication (IPC)</h3>
-        <p>Module 1 (C Monitor) writes its snapshot to <code>data/processes.json.tmp</code> and uses the POSIX <code>rename()</code> system call to atomically replace <code>data/processes.json</code>. This guarantees zero-race condition reads for the Python dashboard and Web UI.</p>
+      
+      <!-- Top Architecture Banner -->
+      <div class="arch-header-banner">
+        <div class="arch-header-title">
+          <h2>🏛️ Operating Systems Architecture & Process Lifecycle</h2>
+          <p>Dual-Ring POSIX Architecture: Linux Kernel Space (Ring 0) &bull; User-Space Modules (Ring 3) &bull; Decoupled Atomic IPC</p>
+        </div>
+        <div class="arch-nav-pills">
+          <a class="arch-nav-pill active" href="#arch-diagram-section">📐 Architecture Diagram</a>
+          <a class="arch-nav-pill" href="#arch-flowchart-section">🔄 Execution Flowchart</a>
+          <a class="arch-nav-pill" href="#arch-ascii-section">💻 ASCII Blueprint</a>
+          <a class="arch-nav-pill" href="#arch-concepts-section">📚 OS Viva Notes</a>
+        </div>
       </div>
+
+      <!-- Section 1: Visual SVG Architecture Diagram -->
+      <div id="arch-diagram-section" class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-card-title">
+            <span>📐 System Architecture: Kernel Space vs. User Space Modules</span>
+          </div>
+          <span style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--accent-cyan); background: rgba(6, 182, 212, 0.1); padding: 0.2rem 0.6rem; border-radius: 4px; border: 1px solid rgba(6, 182, 212, 0.3);">
+            POSIX C99 &bull; Python 3 &bull; CFS &bull; Atomic IPC
+          </span>
+        </div>
+
+        <div class="arch-svg-container">
+          <svg viewBox="0 0 960 550" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="kernelGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0f223d" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#0a1424" stop-opacity="0.95"/>
+              </linearGradient>
+              <linearGradient id="userGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0d1726" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#080e18" stop-opacity="0.9"/>
+              </linearGradient>
+              <linearGradient id="m1Grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0d3142"/>
+                <stop offset="100%" stop-color="#071b26"/>
+              </linearGradient>
+              <linearGradient id="m2Grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#2d163a"/>
+                <stop offset="100%" stop-color="#180b21"/>
+              </linearGradient>
+              <linearGradient id="m3Grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0e2e21"/>
+                <stop offset="100%" stop-color="#071811"/>
+              </linearGradient>
+              <linearGradient id="ipcGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#131e30"/>
+                <stop offset="100%" stop-color="#0a111c"/>
+              </linearGradient>
+
+              <!-- Markers -->
+              <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4"/>
+              </marker>
+              <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6"/>
+              </marker>
+              <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+              </marker>
+              <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+              </marker>
+              <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+              </marker>
+            </defs>
+
+            <!-- 1. KERNEL SPACE CONTAINER -->
+            <rect x="20" y="20" width="920" height="115" rx="10" fill="url(#kernelGrad)" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6 3"/>
+            <rect x="35" y="10" width="310" height="22" rx="4" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+            <text x="45" y="25" fill="#60a5fa" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" letter-spacing="1">
+              ⚡ LINUX KERNEL SPACE (Ring 0 &bull; Kernel Mode)
+            </text>
+
+            <!-- Kernel Block 1: /proc Virtual FS -->
+            <rect x="40" y="45" width="260" height="75" rx="8" fill="#0b1728" stroke="#06b6d4" stroke-width="1.2"/>
+            <text x="52" y="65" fill="#38bdf8" font-size="13" font-family="-apple-system, sans-serif" font-weight="700">/proc Virtual Filesystem</text>
+            <text x="52" y="82" fill="#94a3b8" font-size="11" font-family="monospace">/proc/[pid]/status (RSS, State)</text>
+            <text x="52" y="97" fill="#94a3b8" font-size="11" font-family="monospace">/proc/[pid]/stat (utime, stime)</text>
+            <text x="52" y="112" fill="#64748b" font-size="10" font-family="-apple-system, sans-serif">In-memory dynamic kernel pseudo-FS</text>
+
+            <!-- Kernel Block 2: CFS CPU Scheduler -->
+            <rect x="345" y="45" width="270" height="75" rx="8" fill="#0b1728" stroke="#8b5cf6" stroke-width="1.2"/>
+            <text x="357" y="65" fill="#c084fc" font-size="13" font-family="-apple-system, sans-serif" font-weight="700">CFS (Completely Fair Scheduler)</text>
+            <text x="357" y="82" fill="#94a3b8" font-size="11" font-family="-apple-system, sans-serif">Virtual Runtime (vruntime) & Weights</text>
+            <text x="357" y="97" fill="#94a3b8" font-size="11" font-family="monospace">Nice Priority Range: -20 to +19</text>
+            <text x="357" y="112" fill="#64748b" font-size="10" font-family="-apple-system, sans-serif">Weight = 1024 / (1.25^nice)</text>
+
+            <!-- Kernel Block 3: POSIX Priority Syscalls -->
+            <rect x="655" y="45" width="265" height="75" rx="8" fill="#0b1728" stroke="#f59e0b" stroke-width="1.2"/>
+            <text x="667" y="65" fill="#fbbf24" font-size="13" font-family="-apple-system, sans-serif" font-weight="700">Scheduling System Calls</text>
+            <text x="667" y="82" fill="#94a3b8" font-size="11" font-family="monospace">setpriority(PRIO_PROCESS, pid, nice)</text>
+            <text x="667" y="97" fill="#94a3b8" font-size="11" font-family="monospace">getpriority() + errno verification</text>
+            <text x="667" y="112" fill="#64748b" font-size="10" font-family="-apple-system, sans-serif">Enforces CAP_SYS_NICE privilege check</text>
+
+            <!-- Connector in Kernel: Syscall updates CFS -->
+            <path d="M 655 82 L 623 82" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)"/>
+
+            <!-- 2. USER SPACE CONTAINER -->
+            <rect x="20" y="155" width="920" height="375" rx="10" fill="url(#userGrad)" stroke="#24344d" stroke-width="1.5"/>
+            <rect x="35" y="145" width="370" height="22" rx="4" fill="#1b2a40" stroke="#24344d" stroke-width="1"/>
+            <text x="45" y="160" fill="#94a3b8" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" letter-spacing="1">
+              💻 USER SPACE (Ring 3 &bull; Unprivileged Multi-Module Architecture)
+            </text>
+
+            <!-- Module 1 Card (Student 1: Harshad S) -->
+            <rect x="40" y="180" width="260" height="175" rx="8" fill="url(#m1Grad)" stroke="#06b6d4" stroke-width="1.8"/>
+            <rect x="50" y="190" width="165" height="18" rx="9" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="1"/>
+            <text x="58" y="202" fill="#22d3ee" font-size="9" font-family="monospace" font-weight="700">STUDENT 1: HARSHAD S</text>
+            <text x="50" y="228" fill="#fff" font-size="13" font-family="-apple-system, sans-serif" font-weight="700">Module 1: Monitor (C99)</text>
+            <text x="50" y="246" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Scans /proc numeric directories</text>
+            <text x="50" y="262" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• 2-Point CPU tick delta sampling</text>
+            <text x="50" y="278" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Parses VmRSS physical memory</text>
+            <text x="50" y="294" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Classifies workload [DEV-TOOL, etc]</text>
+            <text x="50" y="310" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Disambiguates VS Code cmdline</text>
+            <rect x="50" y="325" width="240" height="20" rx="4" fill="#082330" stroke="#0891b2" stroke-width="1"/>
+            <text x="56" y="338" fill="#38bdf8" font-size="9.5" font-family="monospace">rename("data/processes.json.tmp")</text>
+
+            <!-- Decoupled IPC Bus (Center) -->
+            <rect x="335" y="180" width="280" height="175" rx="8" fill="url(#ipcGrad)" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="350" y="202" fill="#60a5fa" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" letter-spacing="0.5">ATOMIC FILE-BASED IPC BUS</text>
+
+            <!-- File 1: processes.json -->
+            <rect x="350" y="215" width="250" height="58" rx="6" fill="#0c1726" stroke="#06b6d4" stroke-width="1.2"/>
+            <text x="362" y="235" fill="#22d3ee" font-size="12" font-family="monospace" font-weight="700">data/processes.json</text>
+            <text x="362" y="252" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">Atomic snapshot &bull; Zero race conditions</text>
+            <text x="362" y="265" fill="#64748b" font-size="9" font-family="monospace">PIDs, CPU %, VmRSS MB, Nice, Cat</text>
+
+            <!-- File 2: actions.jsonl -->
+            <rect x="350" y="285" width="250" height="58" rx="6" fill="#0c1726" stroke="#8b5cf6" stroke-width="1.2"/>
+            <text x="362" y="305" fill="#c084fc" font-size="12" font-family="monospace" font-weight="700">data/actions.jsonl</text>
+            <text x="362" y="322" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">Append-only audit trail log stream</text>
+            <text x="362" y="335" fill="#64748b" font-size="9" font-family="monospace">Timestamp, PID, Old/New Nice, Status</text>
+
+            <!-- Module 2 Card (Student 2: Mohnish Shanmugam) -->
+            <rect x="650" y="180" width="270" height="175" rx="8" fill="url(#m2Grad)" stroke="#8b5cf6" stroke-width="1.8"/>
+            <rect x="660" y="190" width="200" height="18" rx="9" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6" stroke-width="1"/>
+            <text x="668" y="202" fill="#c084fc" font-size="9" font-family="monospace" font-weight="700">STUDENT 2: MOHNISH SHANMUGAM</text>
+            <text x="660" y="228" fill="#fff" font-size="13" font-family="-apple-system, sans-serif" font-weight="700">Module 2: Governor (C99)</text>
+            <text x="660" y="246" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• inspect &lt;PID&gt; priority query</text>
+            <text x="660" y="262" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• evaluate &lt;PID&gt; &lt;nice&gt; (dry-run)</text>
+            <text x="660" y="278" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Safety: rejects PID 1 (Init/Systemd)</text>
+            <text x="660" y="294" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Validates nice range [-20 to +19]</text>
+            <text x="660" y="310" fill="#94a3b8" font-size="10.5" font-family="-apple-system, sans-serif">• Executes setpriority() syscall</text>
+            <rect x="660" y="325" width="250" height="20" rx="4" fill="#200d2b" stroke="#9333ea" stroke-width="1"/>
+            <text x="666" y="338" fill="#e9d5ff" font-size="9.5" font-family="monospace">fopen("data/actions.jsonl", "a")</text>
+
+            <!-- Module 3 Card (Student 3: Girithar M) -->
+            <rect x="40" y="380" width="880" height="135" rx="8" fill="url(#m3Grad)" stroke="#10b981" stroke-width="1.8"/>
+            <rect x="50" y="390" width="165" height="18" rx="9" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1"/>
+            <text x="58" y="402" fill="#34d399" font-size="9" font-family="monospace" font-weight="700">STUDENT 3: GIRITHAR M</text>
+            <text x="50" y="426" fill="#fff" font-size="13.5" font-family="-apple-system, sans-serif" font-weight="700">
+              Module 3: Analytics Dashboard & Web UI (Python 3 Standard Library + HTML5/CSS/JS)
+            </text>
+
+            <!-- 3 Columns inside Module 3 -->
+            <!-- Col 1 -->
+            <rect x="50" y="438" width="265" height="65" rx="6" fill="#0a1d17" stroke="#059669" stroke-width="1"/>
+            <text x="60" y="456" fill="#6ee7b7" font-size="11" font-family="-apple-system, sans-serif" font-weight="700">Terminal TUI & Fallback Parser</text>
+            <text x="60" y="472" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Fault-tolerant JSON ingestion</text>
+            <text x="60" y="486" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Real-time ASCII CPU gauge bars</text>
+            <text x="60" y="498" fill="#64748b" font-size="9" font-family="monospace">python3 dashboard.py --watch</text>
+
+            <!-- Col 2 -->
+            <rect x="330" y="438" width="290" height="65" rx="6" fill="#0a1d17" stroke="#059669" stroke-width="1"/>
+            <text x="340" y="456" fill="#6ee7b7" font-size="11" font-family="-apple-system, sans-serif" font-weight="700">Web Dashboard & Live API Server</text>
+            <text x="340" y="472" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Live Linux /proc sync & stats</text>
+            <text x="340" y="486" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Friendly App Names & Parent/Child tree</text>
+            <text x="340" y="498" fill="#64748b" font-size="9" font-family="monospace">GET /api/processes &bull; POST /api/govern</text>
+
+            <!-- Col 3 -->
+            <rect x="635" y="438" width="275" height="65" rx="6" fill="#0a1d17" stroke="#059669" stroke-width="1"/>
+            <text x="645" y="456" fill="#6ee7b7" font-size="11" font-family="-apple-system, sans-serif" font-weight="700">Audit Verification & Viva Reports</text>
+            <text x="645" y="472" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Cross-references governor actions</text>
+            <text x="645" y="486" fill="#94a3b8" font-size="10" font-family="-apple-system, sans-serif">• Generates markdown lab summary</text>
+            <text x="645" y="498" fill="#64748b" font-size="9" font-family="monospace">--export-report docs/dashboard_report.md</text>
+
+            <!-- CROSS-SPACE CONNECTORS & FLOW ARROWS -->
+
+            <!-- 1. Kernel /proc to Module 1 (Reads) -->
+            <path d="M 170 120 L 170 172" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrow-cyan)"/>
+            <rect x="110" y="138" width="120" height="16" rx="3" fill="#04202b" stroke="#06b6d4" stroke-width="0.8"/>
+            <text x="115" y="150" fill="#38bdf8" font-size="8.5" font-family="monospace">read /proc entries</text>
+
+            <!-- 2. Module 1 to processes.json (Atomic Write) -->
+            <path d="M 300 244 L 342 244" stroke="#06b6d4" stroke-width="2.2" marker-end="url(#arrow-cyan)"/>
+
+            <!-- 3. processes.json down to Module 3 -->
+            <path d="M 475 273 L 475 372" stroke="#06b6d4" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-cyan)"/>
+
+            <!-- 4. Module 2 append to actions.jsonl -->
+            <path d="M 650 314 L 608 314" stroke="#8b5cf6" stroke-width="2.2" marker-end="url(#arrow-purple)"/>
+
+            <!-- 5. actions.jsonl down to Module 3 -->
+            <path d="M 505 343 L 505 372" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-purple)"/>
+
+            <!-- 6. Module 3 Web Govern trigger up to Module 2 -->
+            <path d="M 780 380 L 780 363" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3 3" marker-end="url(#arrow-amber)"/>
+
+            <!-- 7. Module 2 up to setpriority() Syscall -->
+            <path d="M 785 180 L 785 128" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+            <rect x="730" y="138" width="120" height="16" rx="3" fill="#2d1d07" stroke="#f59e0b" stroke-width="0.8"/>
+            <text x="734" y="150" fill="#fbbf24" font-size="8.5" font-family="monospace">setpriority() syscall</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Section 2: End-to-End Workflow Flowchart -->
+      <div id="arch-flowchart-section" class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-card-title">
+            <span>🔄 End-to-End Project Execution Flowchart</span>
+          </div>
+          <span style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--accent-emerald); background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.6rem; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);">
+            Closed-Loop Feedback: Monitor &rarr; Ingest &rarr; Govern &rarr; Reschedule
+          </span>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">
+          The system operates in a complete feedback loop where live process measurements flow upward into analytics and user-approved priority governors, which feed system calls back into the Linux CFS kernel scheduler:
+        </p>
+
+        <div class="flowchart-pipeline">
+          
+          <!-- Step 1 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-cyan">Stage 1 &bull; Student 1</span>
+            <div class="flow-step-title">1. /proc Directory Traversal</div>
+            <div class="flow-step-desc">
+              The C monitor scans numeric subdirectories in <code>/proc</code>. Reads <code>/proc/[pid]/status</code> for Name, PPID, process state, and physical resident memory (<code>VmRSS</code>).
+            </div>
+            <div class="flow-step-meta">
+              <span>Source: Linux Kernel</span>
+              <span>Rate: 1.0s interval</span>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-cyan">Stage 2 &bull; Student 1</span>
+            <div class="flow-step-title">2. Two-Point CPU Delta Sampling</div>
+            <div class="flow-step-desc">
+              Samples CPU ticks (<code>utime</code> + <code>stime</code>) across time window &Delta;t. Uses clock ticks (<code>CLK_TCK = 100Hz</code>) to calculate exact CPU utilization %. Resolves friendly App Names via <code>/proc/[pid]/cmdline</code>.
+            </div>
+            <div class="flow-step-meta">
+              <span>Formula: &Delta;ticks/CLK_TCK/&Delta;t</span>
+              <span>Tags: [DEV-TOOL, etc]</span>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-cyan">Stage 3 &bull; Student 1</span>
+            <div class="flow-step-title">3. Atomic POSIX File IPC</div>
+            <div class="flow-step-desc">
+              Serializes process array into JSON schema. Writes to <code>data/processes.json.tmp</code> and executes atomic <code>rename()</code>. Guarantees zero-race condition reads for downstream modules.
+            </div>
+            <div class="flow-step-meta">
+              <span>Syscall: rename()</span>
+              <span>Target: processes.json</span>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-emerald">Stage 4 &bull; Student 3</span>
+            <div class="flow-step-title">4. Analytics Ingestion & Hierarchy</div>
+            <div class="flow-step-desc">
+              Dashboard ingests <code>processes.json</code> and cross-references <code>actions.jsonl</code>. Computes memory pressure, system contention, and maps parent-to-child process tree accordions.
+            </div>
+            <div class="flow-step-meta">
+              <span>Engines: TUI & Web GUI</span>
+              <span>HTTP Port: 8080</span>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-purple">Stage 5 &bull; Student 2</span>
+            <div class="flow-step-title">5. Safety Guard & CFS Evaluation</div>
+            <div class="flow-step-desc">
+              User issues governor action. Module 2 validates nice range (<code>-20 to +19</code>), checks privileges, and enforces protection of PID 1 (Init/Systemd). Evaluates predicted CFS CPU weight multiplier.
+            </div>
+            <div class="flow-step-meta">
+              <span>Safety: Reject PID 1</span>
+              <span>Weight: ~1.25^(-&Delta;nice)</span>
+            </div>
+          </div>
+
+          <!-- Step 6 -->
+          <div class="flow-step-card">
+            <span class="flow-step-badge badge-step-amber">Stage 6 &bull; Student 2</span>
+            <div class="flow-step-title">6. Syscall Execution & Audit Trail</div>
+            <div class="flow-step-desc">
+              Invokes <code>setpriority(PRIO_PROCESS, pid, nice)</code>. Linux CFS updates task red-black tree key. Module 2 writes permanent audit record to <code>data/actions.jsonl</code> with live verification.
+            </div>
+            <div class="flow-step-meta">
+              <span>Syscall: setpriority()</span>
+              <span>Log: actions.jsonl</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Section 3: ASCII Blueprint -->
+      <div id="arch-ascii-section" class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-card-title">
+            <span>💻 ASCII System Blueprint (docs/architecture.md)</span>
+          </div>
+          <span style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-dim);">
+            Pure POSIX &bull; Decoupled Shared State
+          </span>
+        </div>
+
+        <div class="arch-ascii-box">+-----------------------------------------------------------------------------------+
+|                               Linux Kernel Space                                  |
+|                                                                                   |
+|  +--------------------+     +---------------------------+     +----------------+  |
+|  | /proc Filesystem   |     | CFS CPU Scheduler         |     | setpriority()  |  |
+|  | (/proc/[pid]/...)  |     | (Nice Values: -20 to 19)  |     | System Call    |  |
++--+---------+----------+-----+-------------+-------------+-----+-------+----------++
+             |                              |                           |
+             | (Virtual file reads)         | (Inspect / Evaluate)      | (Syscall)
+             v                              v                           |
++---------------------------+  +---------------------------+            |
+| Module 1: Monitor (C)     |  | Module 2: Governor (C)    +------------+
+| (Student 1: Harshad S)    |  | (Student 2: Mohnish)      |
+| - Scans /proc             |  | - inspect &lt;PID&gt;           |
+| - Samples utime + stime   |  | - evaluate &lt;PID&gt; &lt;NICE&gt;   |
+| - Workload heuristic tags |  | - set-nice &lt;PID&gt; &lt;NICE&gt;   |
+| - Atomic JSON snapshot    |  | - Appends actions.jsonl   |
++-------------+-------------+  +-------------+-------------+
+              |                              |
+              | data/processes.json          | data/actions.jsonl
+              +--------------+---------------+
+                             | (Decoupled File-based IPC)
+                             v
+              +-------------------------------+
+              | Module 3: Analytics (Python 3)|
+              | (Student 3: Girithar M)       |
+              | - Real-time terminal table    |
+              | - Workload distribution       |
+              | - Governor audit & comparison |
+              +-------------------------------+</div>
+      </div>
+
+      <!-- Section 4: OS Concepts & Viva Formulas -->
+      <div id="arch-concepts-section" class="arch-card">
+        <div class="arch-card-header">
+          <div class="arch-card-title">
+            <span>📚 Core Operating System Concepts & Viva Preparation</span>
+          </div>
+          <span style="font-size: 0.78rem; font-family: var(--font-mono); color: var(--accent-cyan);">
+            40-Mark OS Lab Viva Guide
+          </span>
+        </div>
+
+        <div class="os-pillar-grid">
+          
+          <div class="os-pillar-card">
+            <h4>1. The Linux /proc Virtual Filesystem</h4>
+            <p>
+              In Linux, <code>/proc</code> does not reside on physical storage; it is an in-memory virtual pseudo-filesystem generated dynamically by the kernel on read requests.
+            </p>
+            <p>
+              DevGovernor reads <code>/proc/[pid]/status</code> for process metadata and <code>/proc/[pid]/stat</code> for cumulative user/system CPU clock ticks.
+            </p>
+            <div class="os-pillar-formula">
+              Key Files: /proc/[pid]/{status, stat, cmdline}
+            </div>
+          </div>
+
+          <div class="os-pillar-card">
+            <h4>2. Two-Point CPU Tick Delta Sampling</h4>
+            <p>
+              Because the Linux kernel does not provide an instantaneous CPU percentage, DevGovernor performs two-point delta sampling across wall-clock time &Delta;t.
+            </p>
+            <div class="os-pillar-formula">
+              CPU % = [(&Delta;utime + &Delta;stime) / CLK_TCK] / &Delta;t &times; 100.0
+            </div>
+          </div>
+
+          <div class="os-pillar-card">
+            <h4>3. Completely Fair Scheduler (CFS)</h4>
+            <p>
+              CFS tracks virtual runtime (<code>vruntime</code>) for each task. Nice values (-20 to 19) map to weights in the kernel <code>sched_prio_to_weight</code> table.
+            </p>
+            <div class="os-pillar-formula">
+              &Delta;vruntime = &Delta;exec_time &times; (NICE_0_LOAD / weight)
+            </div>
+          </div>
+
+          <div class="os-pillar-card">
+            <h4>4. Physical RAM (VmRSS) vs. Virtual (VmSize)</h4>
+            <p>
+              <strong>VmRSS:</strong> The exact physical memory frames in RAM currently held by the process. DevGovernor tracks VmRSS because it reflects real memory pressure.
+            </p>
+            <p>
+              <strong>VmSize:</strong> Total virtual address space mapped (including shared libraries and uncommitted pages).
+            </p>
+            <div class="os-pillar-formula">
+              Tracked Metric: VmRSS (Resident Set Size in MB)
+            </div>
+          </div>
+
+          <div class="os-pillar-card">
+            <h4>5. Atomic Inter-Process Communication</h4>
+            <p>
+              Module 1 writes snapshots to <code>processes.json.tmp</code> and invokes the POSIX <code>rename()</code> syscall to atomically replace <code>processes.json</code>.
+            </p>
+            <p>
+              This guarantees that Module 3 and the Web UI never read partially written files, eliminating race conditions without requiring locks.
+            </p>
+            <div class="os-pillar-formula">
+              Syscall: rename(tmp_path, final_path) &bull; O(1) Atomic
+            </div>
+          </div>
+
+          <div class="os-pillar-card">
+            <h4>6. Safety Guards: PID 1 Protection</h4>
+            <p>
+              PID 1 (<code>init</code> or <code>systemd</code>) is the root of the user-space process tree. Deprioritizing or tampering with PID 1 can destabilize the operating system.
+            </p>
+            <p>
+              Module 2 enforces strict safety guards: rejects any operation targeting PID 1, and verifies <code>CAP_SYS_NICE</code> privilege for negative nice values.
+            </p>
+            <div class="os-pillar-formula">
+              Guard Rule: if (pid &le; 1) return ERROR_PROTECTED_PID;
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </section>
 
     <!-- TAB 5: Team & Credits -->

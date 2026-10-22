@@ -639,3 +639,254 @@ footer {
   font-size: 0.85rem;
   color: var(--text-dim);
 }
+
+/* ==========================================================================
+   OS Architecture Diagram & Flowchart Styles
+   ========================================================================== */
+.arch-header-banner {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(139, 92, 246, 0.12));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.arch-header-title h2 {
+  font-size: 1.35rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.arch-header-title p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.arch-nav-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.arch-nav-pill {
+  padding: 0.4rem 0.85rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.arch-nav-pill:hover, .arch-nav-pill.active {
+  background-color: var(--bg-hover);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.arch-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.arch-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.arch-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arch-svg-container {
+  width: 100%;
+  overflow-x: auto;
+  background-color: #090e17;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  padding: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.arch-svg-container svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Flowchart Step Pipeline Grid */
+.flowchart-pipeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.flow-step-card {
+  background: linear-gradient(180deg, rgba(22, 32, 50, 0.95), rgba(17, 24, 39, 0.95));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.flow-step-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-cyan);
+}
+
+.flow-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  width: fit-content;
+}
+
+.badge-step-cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.badge-step-purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-purple);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.badge-step-emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-step-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.flow-step-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.4rem;
+}
+
+.flow-step-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  flex-grow: 1;
+}
+
+.flow-step-meta {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ASCII Code Box */
+.arch-ascii-box {
+  background-color: #070b12;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #38bdf8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Key OS Pillar Grid */
+.os-pillar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.os-pillar-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.os-pillar-card h4 {
+  font-size: 1rem;
+  color: var(--accent-cyan);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.os-pillar-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 0.5rem;
+}
+
+.os-pillar-formula {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #a5f3fc;
+  margin-top: 0.5rem;
+}
