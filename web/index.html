@@ -72,7 +72,7 @@
       <!-- Toolbar / Filters -->
       <div class="toolbar">
         <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-          <input type="text" id="search-input" class="search-input" placeholder="Search PID or process name...">
+          <input type="text" id="search-input" class="search-input" placeholder="Search PID, Parent ID, App Name, or command...">
           <select id="filter-category" class="select-filter">
             <option value="">All Workload Categories</option>
             <option value="development_tool">Development Tools (Editors, Shells)</option>
@@ -81,6 +81,7 @@
             <option value="background_process">Background Daemons (Systemd, Cron)</option>
             <option value="system_or_unknown">System / Other</option>
           </select>
+          <button class="btn" id="toggle-all-children-btn" onclick="toggleAllChildDropdowns()">▾ Expand All Children</button>
         </div>
         <div style="font-size: 0.8rem; color: var(--text-dim); font-family: var(--font-mono);">
           Click table headers to sort &bull; Sampling interval: 1.0s
@@ -93,19 +94,20 @@
           <thead>
             <tr>
               <th data-sort="pid">PID</th>
-              <th data-sort="ppid">PPID</th>
-              <th data-sort="name">Process Name</th>
+              <th data-sort="ppid">Parent ID (PPID)</th>
+              <th data-sort="app_name">Application (App Name)</th>
               <th data-sort="workload_category">Category</th>
               <th data-sort="state">State</th>
               <th data-sort="nice_value">Nice</th>
               <th data-sort="cpu_percent">CPU % Utilization</th>
               <th data-sort="memory_mb">Physical RAM (RSS)</th>
+              <th>Child Processes (Dropdown)</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody id="process-table-body">
             <tr>
-              <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-dim);">Loading live process metrics...</td>
+              <td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-dim);">Loading live process metrics...</td>
             </tr>
           </tbody>
         </table>

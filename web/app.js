@@ -34,12 +34,114 @@ const CFS_WEIGHT_TABLE = {
   "15": 36,     "16": 29,     "17": 23,     "18": 18,     "19": 15
 };
 
+// Friendly Application Name Catalog
+const APP_NAME_MAP = {
+  // Developer Tools & Code Editors
+  "code": "Visual Studio Code",
+  "vscode": "Visual Studio Code",
+  "cursor": "Cursor AI Code Editor",
+  "nvim": "Neovim Text Editor",
+  "vim": "Vim Text Editor",
+  "emacs": "GNU Emacs Editor",
+  "nano": "GNU Nano Terminal Editor",
+  "bash": "GNU Bourne-Again Shell (Bash)",
+  "zsh": "Z Shell (Zsh)",
+  "fish": "Friendly Interactive Shell (Fish)",
+  "sh": "POSIX Shell",
+  "tmux": "Tmux Terminal Multiplexer",
+  "screen": "GNU Screen Window Manager",
+  "git": "Git Version Control System",
+  "gdb": "GNU Project Debugger (GDB)",
+  "valgrind": "Valgrind Memory Profiler",
+  "strace": "System Call Diagnostic Tracer",
+  "htop": "Htop Interactive Process Viewer",
+  "top": "Top Process Monitor",
+
+  // Build Systems & Compilers
+  "gcc": "GNU C Compiler (GCC)",
+  "g++": "GNU C++ Compiler (G++)",
+  "clang": "LLVM Clang C Compiler",
+  "clang++": "LLVM Clang C++ Compiler",
+  "cc1": "GCC C Compiler Core",
+  "cc1plus": "GCC C++ Compiler Core",
+  "as": "GNU Assembler (gas)",
+  "ld": "GNU Binary Linker (ld)",
+  "make": "GNU Make Build System",
+  "cmake": "CMake Meta-Build System",
+  "ninja": "Ninja High-Speed Build Engine",
+  "rustc": "Rust Language Compiler",
+  "cargo": "Rust Cargo Package Manager",
+  "mvn": "Apache Maven Java Build Tool",
+  "gradle": "Gradle Build System",
+  "javac": "Java Standard Compiler",
+  "tsc": "TypeScript Compiler",
+
+  // Development Servers & Runtimes
+  "node": "Node.js JavaScript Runtime",
+  "python": "Python 3 Runtime",
+  "python3": "Python 3 Runtime",
+  "uvicorn": "Uvicorn ASGI Web Server",
+  "gunicorn": "Gunicorn WSGI Web Server",
+  "flask": "Flask Web Application",
+  "django": "Django Web Framework",
+  "ruby": "Ruby Programming Runtime",
+  "rails": "Ruby on Rails Server",
+  "java": "Java Virtual Machine (JVM)",
+  "go": "Go Programming Language Toolchain",
+  "vite": "Vite Frontend Dev Server",
+  "webpack": "Webpack Asset Bundler",
+  "docker": "Docker Container Engine",
+  "dockerd": "Docker Daemon",
+  "containerd": "Containerd Container Runtime",
+
+  // System & Linux Background Daemons
+  "systemd": "Systemd Linux Init Manager",
+  "init": "Linux Init Process",
+  "systemd-journal": "Systemd Journal Logging Daemon",
+  "systemd-udevd": "Kernel Device Event Manager (udev)",
+  "systemd-resolve": "Systemd Network DNS Resolver",
+  "systemd-timesyn": "Network Time Sync Daemon (timesyncd)",
+  "systemd-logind": "Systemd User Login Manager",
+  "cron": "Cron Scheduled Job Daemon",
+  "dbus-daemon": "D-Bus System Message Broker",
+  "rsyslogd": "Rsyslog System Logger",
+  "sshd": "OpenSSH Secure Shell Daemon",
+  "snapd": "Snap Package Manager Daemon",
+  "pulseaudio": "PulseAudio Sound Server",
+  "pipewire": "PipeWire Multimedia Router",
+  "sleep": "POSIX Sleep Delay Utility",
+  "openclaw-gatewa": "OpenClaw Gateway Service",
+  "wslservice": "Windows Subsystem for Linux (WSL)",
+  "agetty": "Linux TTY Terminal Login",
+  "unattended-upgr": "Ubuntu Automatic Security Upgrades"
+};
+
+function getFriendlyAppName(rawName, category) {
+  if (!rawName) return "Unknown Application";
+  const lower = rawName.toLowerCase().trim();
+
+  if (APP_NAME_MAP[lower]) return APP_NAME_MAP[lower];
+
+  // Heuristic pattern matchers
+  if (lower.startsWith("python")) return `Python Application (${rawName})`;
+  if (lower.startsWith("node")) return `Node.js Service (${rawName})`;
+  if (lower.startsWith("systemd-")) return `Systemd ${rawName.replace("systemd-", "").toUpperCase()} Service`;
+  if (lower.startsWith("(udev-")) return "Kernel Udev Device Worker";
+  if (lower.includes("gcc") || lower.includes("clang")) return `C/C++ Compiler (${rawName})`;
+  if (lower.includes("make") || lower.includes("ninja")) return `Build Tool (${rawName})`;
+
+  // Capitalize fallback
+  return rawName.charAt(0).toUpperCase() + rawName.slice(1) + " Process";
+}
+
 let currentProcessData = null;
 let currentActionsData = [];
 let sortColumn = "cpu_percent";
 let sortAscending = false;
 let autoRefreshTimer = null;
 let isAutoRefresh = true;
+let expandedParentPids = new Set();
+
 
 // Tab Switching
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -149,25 +251,69 @@ function renderMetrics() {
   if (elPrio) elPrio.textContent = elevatedPriority;
 }
 
-// Render Active Process Table
+// Child Process Dropdown Management
+function toggleChildDropdown(pid) {
+  if (expandedParentPids.has(pid)) {
+    expandedParentPids.delete(pid);
+  } else {
+    expandedParentPids.add(pid);
+  }
+  renderProcessTable();
+}
+
+function toggleAllChildDropdowns() {
+  const btn = document.getElementById("toggle-all-children-btn");
+  if (!currentProcessData || !currentProcessData.processes) return;
+
+  const parentPidsWithChildren = new Set();
+  currentProcessData.processes.forEach(p => {
+    if (p.ppid && p.ppid > 0) parentPidsWithChildren.add(p.ppid);
+  });
+
+  if (expandedParentPids.size >= parentPidsWithChildren.size && parentPidsWithChildren.size > 0) {
+    expandedParentPids.clear();
+    if (btn) btn.textContent = "▾ Expand All Children";
+  } else {
+    expandedParentPids = new Set(parentPidsWithChildren);
+    if (btn) btn.textContent = "▴ Collapse All Children";
+  }
+  renderProcessTable();
+}
+
+window.toggleChildDropdown = toggleChildDropdown;
+window.toggleAllChildDropdowns = toggleAllChildDropdowns;
+
+// Render Active Process Table with App Names and Parent/Child Dropdowns
 function renderProcessTable() {
   if (!currentProcessData || !currentProcessData.processes) return;
   const tbody = document.getElementById("process-table-body");
   if (!tbody) return;
 
-  const searchTerm = (document.getElementById("search-input")?.value || "").toLowerCase();
+  const searchTerm = (document.getElementById("search-input")?.value || "").toLowerCase().trim();
   const filterCat = document.getElementById("filter-category")?.value || "";
 
-  let list = [...currentProcessData.processes];
+  // 1. Build Process Map and Child Process Map
+  const processMap = new Map();
+  const childrenMap = new Map();
 
-  // Filtering
-  list = list.filter(p => {
-    const matchSearch = String(p.pid).includes(searchTerm) || p.name.toLowerCase().includes(searchTerm);
+  currentProcessData.processes.forEach(p => {
+    p.app_name = getFriendlyAppName(p.name, p.workload_category);
+    processMap.set(p.pid, p);
+    if (!childrenMap.has(p.ppid)) childrenMap.set(p.ppid, []);
+    childrenMap.get(p.ppid).push(p);
+  });
+
+  // 2. Filter processes
+  let list = currentProcessData.processes.filter(p => {
+    const matchSearch = String(p.pid).includes(searchTerm) ||
+                        String(p.ppid).includes(searchTerm) ||
+                        p.name.toLowerCase().includes(searchTerm) ||
+                        p.app_name.toLowerCase().includes(searchTerm);
     const matchCat = !filterCat || p.workload_category === filterCat;
     return matchSearch && matchCat;
   });
 
-  // Sorting
+  // 3. Sorting
   list.sort((a, b) => {
     let va = a[sortColumn];
     let vb = b[sortColumn];
@@ -177,7 +323,14 @@ function renderProcessTable() {
     return sortAscending ? va - vb : vb - va;
   });
 
-  tbody.innerHTML = list.map(p => {
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-dim);">No processes match your search/filter criteria.</td></tr>`;
+    return;
+  }
+
+  // 4. Render Rows with Child Dropdowns
+  let html = "";
+  list.forEach(p => {
     const cpu = p.cpu_percent !== null ? p.cpu_percent : 0;
     const cpuClamped = Math.min(cpu, 100);
     const gaugeClass = cpu > 60 ? "gauge-high" : (cpu > 20 ? "gauge-mid" : "gauge-low");
@@ -188,13 +341,26 @@ function renderProcessTable() {
     else if (p.nice_value > 0) niceClass = "nice-low";
 
     const catBadge = getCategoryBadge(p.workload_category);
+    const children = childrenMap.get(p.pid) || [];
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedParentPids.has(p.pid);
 
-    return `
-      <tr>
+    // Parent details lookup
+    const parentObj = processMap.get(p.ppid);
+    const parentLabel = p.ppid === 0 ? "Kernel / Init" : (parentObj ? parentObj.name : "Parent");
+
+    html += `
+      <tr class="${isExpanded ? 'parent-row-open' : ''}">
         <td class="mono"><strong>${p.pid}</strong></td>
-        <td class="mono" style="color: var(--text-dim);">${p.ppid}</td>
+        <td class="mono">
+          <span style="color: var(--accent-cyan); font-weight: 600;">PID ${p.ppid}</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim); display: block;">${escapeHtml(parentLabel)}</span>
+        </td>
         <td>
-          <span style="font-weight: 600; color: #fff;">${escapeHtml(p.name)}</span>
+          <div class="app-name-container">
+            <span class="app-name-title">${escapeHtml(p.app_name)}</span>
+            <span class="app-name-bin">proc: ${escapeHtml(p.name)}</span>
+          </div>
         </td>
         <td>${catBadge}</td>
         <td>
@@ -215,12 +381,87 @@ function renderProcessTable() {
         </td>
         <td class="mono">${p.memory_mb !== null ? `${p.memory_mb.toFixed(1)} MB` : 'N/A'}</td>
         <td>
+          ${hasChildren ? `
+            <button class="child-dropdown-btn ${isExpanded ? 'active' : ''}" onclick="toggleChildDropdown(${p.pid})">
+              <span>${isExpanded ? '▴ Hide' : '▾ Show'} (${children.length})</span>
+            </button>
+          ` : `<span style="color: var(--text-dim); font-size: 0.78rem;">No child tasks</span>`}
+        </td>
+        <td>
           <button class="btn" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="prefillGovernor(${p.pid}, ${p.nice_value})">Govern</button>
         </td>
       </tr>
     `;
-  }).join("");
+
+    // Dropdown Drawer Row if expanded
+    if (isExpanded && hasChildren) {
+      html += `
+        <tr class="child-table-row">
+          <td colspan="10">
+            <div class="child-drawer">
+              <div class="child-drawer-header">
+                <span><strong>↳ Child Processes of PID ${p.pid} (${escapeHtml(p.app_name)}):</strong> ${children.length} spawned child task(s)</span>
+                <span class="mono" style="font-size: 0.75rem; color: var(--accent-cyan);">Parent PPID: ${p.pid}</span>
+              </div>
+              <table class="child-subtable">
+                <thead>
+                  <tr>
+                    <th>Child PID</th>
+                    <th>Application (Child Name)</th>
+                    <th>Category</th>
+                    <th>State</th>
+                    <th>Nice</th>
+                    <th>CPU % Utilization</th>
+                    <th>Physical RAM</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${children.map(child => {
+                    const cCpu = child.cpu_percent !== null ? child.cpu_percent : 0;
+                    const cCpuClamped = Math.min(cCpu, 100);
+                    const cGaugeClass = cCpu > 60 ? "gauge-high" : (cCpu > 20 ? "gauge-mid" : "gauge-low");
+                    let cNiceClass = "nice-normal";
+                    if (child.nice_value < 0) cNiceClass = "nice-high";
+                    else if (child.nice_value > 0) cNiceClass = "nice-low";
+
+                    return `
+                      <tr>
+                        <td class="mono"><strong>${child.pid}</strong></td>
+                        <td>
+                          <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 600; color: #fff;">${escapeHtml(child.app_name)}</span>
+                            <span class="mono" style="font-size: 0.72rem; color: var(--text-dim);">proc: ${escapeHtml(child.name)}</span>
+                          </div>
+                        </td>
+                        <td>${getCategoryBadge(child.workload_category)}</td>
+                        <td><span class="badge ${child.state === 'R' ? 'badge-dev-srv' : 'badge-bg'}">${child.state === 'R' ? 'Running' : 'Sleep'}</span></td>
+                        <td><span class="nice-pill ${cNiceClass}">${child.nice_value}</span></td>
+                        <td>
+                          <div class="gauge-container" style="min-width: 130px;">
+                            <div class="gauge-bar-bg"><div class="gauge-bar-fill ${cGaugeClass}" style="width: ${cCpuClamped}%;"></div></div>
+                            <span class="mono" style="font-size: 0.78rem;">${child.cpu_percent !== null ? `${cCpu.toFixed(1)}%` : 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td class="mono">${child.memory_mb !== null ? `${child.memory_mb.toFixed(1)} MB` : 'N/A'}</td>
+                        <td>
+                          <button class="btn" style="padding: 0.15rem 0.5rem; font-size: 0.72rem;" onclick="prefillGovernor(${child.pid}, ${child.nice_value})">Govern</button>
+                        </td>
+                      </tr>
+                    `;
+                  }).join("")}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  });
+
+  tbody.innerHTML = html;
 }
+
 
 function getCategoryBadge(cat) {
   switch (cat) {
